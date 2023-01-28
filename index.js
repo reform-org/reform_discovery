@@ -206,6 +206,3 @@ wss.on('connection', function connection(ws) {
 server.listen(7071, () => {
     console.log("WSS Server started at Port 7071");
 });
-
-// notify client when a whitelisted peer connects --> make connection
-
