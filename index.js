@@ -131,6 +131,7 @@ wss.on('connection', function connection(ws) {
     })
         .on('authenticate', (data) => {
             jwt.verify(data.token, process.env.JWT_KEY, async (err, _user) => {
+                if(err) return;
                 // now user is authenticated
                 const user = await db.get("SELECT id, uuid, name, online FROM users WHERE uuid = ?", _user.uuid);
                 // set user online
