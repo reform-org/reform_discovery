@@ -15,7 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 dotenv.config();
 
 const app = express();
-const port = 3000;
+const port = process.env.API_PORT || 3000;
 
 const error = (message) => {
     return {
@@ -203,6 +203,6 @@ wss.on('connection', function connection(ws) {
     });
 });
 
-server.listen(7071, () => {
+server.listen(process.env.WSS_PORT || 7071, () => {
     console.log("WSS Server started at Port 7071");
 });
