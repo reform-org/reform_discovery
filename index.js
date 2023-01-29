@@ -89,12 +89,13 @@ app.listen(port, () => {
 });
 
 console.log(process.env.HTTPS)
-const server = process.env.HTTPS === "TRUE" ? /*createServer({
+const server = process.env.HTTPS === "TRUE" ? createServer({
     cert: readFileSync(process.env.CERT_PATH),
     key: readFileSync(process.env.KEY_PATH)
-})*/"test" : createHttpServer();
+}) : createHttpServer();
 
 const wss = new WebSocketServer({ server });
+server.addListener('upgrade', (req, res, head) => console.log('UPGRADE:', req.url));
 const uuidToClient = new Map(); //one uuid many clients
 const clientToUser = new Map(); //one client one user
 
