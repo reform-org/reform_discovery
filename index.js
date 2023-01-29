@@ -94,8 +94,10 @@ const server = process.env.HTTPS === "TRUE" ? createServer({
     key: readFileSync(process.env.KEY_PATH)
 }) : createHttpServer();
 
-const wss = new WebSocketServer({ server });
+server.on('error', (err) => console.error(err));
 server.addListener('upgrade', (req, res, head) => console.log('UPGRADE:', req.url));
+
+const wss = new WebSocketServer({ server });
 const uuidToClient = new Map(); //one uuid many clients
 const clientToUser = new Map(); //one client one user
 

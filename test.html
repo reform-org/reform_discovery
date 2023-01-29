@@ -21,7 +21,7 @@
                 })
             }).then(res => res.json());
 
-            const ws = new WebSocket('ws://wss.discovery.lukasschreiber.com/');
+            const ws = new WebSocket('wss://wss.discovery.lukasschreiber.com/');
 
             ws.onmessage = (message) => {
                 const event = JSON.parse(message.data);
