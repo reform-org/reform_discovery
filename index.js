@@ -164,6 +164,7 @@ const initializeConnection = async (ws, hostUser, clientUser) => {
 };
 
 wss.on('connection', function connection(ws) {
+    console.log("connection established")
     ws.on('error', console.error);
 
     ws.on('message', function (message) {
@@ -251,6 +252,7 @@ wss.on('connection', function connection(ws) {
 
 server.on('upgrade', (req, res, head) => {
    wss.handleUpgrade(req, res, head, (ws) => {
+    console.log("upgraded")
     wss.emit("connection", ws)
    }) 
 });
