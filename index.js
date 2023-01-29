@@ -88,7 +88,7 @@ app.listen(port, () => {
     console.log(`Example app listening on port ${port}`);
 });
 
-const server = process.env.HTTPS ? createServer({
+const server = process.env.HTTPS === "TRUE" ? createServer({
     cert: readFileSync(process.env.CERT_PATH),
     key: readFileSync(process.env.KEY_PATH)
 }) : createHttpServer();
