@@ -24,8 +24,10 @@ export class db {
   });
 
   static init = () => {
-    db.instance.exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, uuid VARCHAR(255), name VARCHAR(255), password VARCHAR(255), online BOOLEAN DEFAULT FALSE);");
-    db.instance.exec("CREATE TABLE IF NOT EXISTS trust (a INTEGER, b INTEGER, PRIMARY KEY (a, b), FOREIGN KEY(a) REFERENCES users(id), FOREIGN KEY(b) REFERENCES users(id));")
+    db.instance.exec(`
+    CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, uuid VARCHAR(255), name VARCHAR(255), password VARCHAR(255), online BOOLEAN DEFAULT FALSE);
+    CREATE TABLE IF NOT EXISTS trust (a INTEGER, b INTEGER, PRIMARY KEY (a, b), FOREIGN KEY(a) REFERENCES users(id), FOREIGN KEY(b) REFERENCES users(id));
+    `);
   };
 
   static drop = () => {
