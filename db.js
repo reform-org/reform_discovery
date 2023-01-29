@@ -31,6 +31,6 @@ export class db {
   };
 
   static drop = () => {
-    db.instance.exec("DROP TABLE users;");
+    db.instance.exec("DROP TABLE IF EXISTS users; DROP TABLE IF EXISTS trust;");
   };
 }
