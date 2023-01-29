@@ -95,10 +95,7 @@ const server = process.env.HTTPS === "TRUE" ? createServer({
     key: readFileSync(process.env.KEY_PATH)
 }) : createHttpServer();
 
-server.on('error', (err) => console.error(err));
-server.addListener('upgrade', (req, res, head) => console.log('UPGRADE:', req.url));
-
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ noServer: true });
 const uuidToClient = new Map(); //one uuid many clients
 const clientToUser = new Map(); //one client one user
 
@@ -167,7 +164,6 @@ const initializeConnection = async (ws, hostUser, clientUser) => {
 };
 
 wss.on('connection', function connection(ws) {
-    console.log("connecting...")
     ws.on('error', console.error);
 
     ws.on('message', function (message) {
@@ -251,6 +247,12 @@ wss.on('connection', function connection(ws) {
 
         await broadcastAvailableClients(clientToUser);
     });
+});
+
+server.on('upgrade', (req, res, head) => {
+   wss.handleUpgrade(req, res, head, (ws) => {
+    wss.emit("connection", ws)
+   }) 
 });
 
 server.listen(process.env.WSS_PORT || 7071, () => {
