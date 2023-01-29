@@ -70,17 +70,17 @@ app.post("/api/whitelist/revoke", authenticateToken, async (req, res) => {
 });
 
 app.get("/api/clients", authenticateToken, async (req, res) => {
-    const clients = await db.all("SELECT name, uuid, online, EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) as trusted FROM users WHERE NOT id = ?", req.user.id, req.user.id);
+    const clients = await db.all("SELECT name, uuid, online, EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) as trusted, (EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) AND EXISTS(SELECT * FROM trust WHERE a = id AND b = ?)) as mutualTrust FROM users WHERE NOT id = ?", req.user.id, req.user.id, req.user.id, req.user.id);
     res.status(200).json({ clients });
 });
 
 app.get("/api/clients/untrusted", authenticateToken, async (req, res) => {
-    const clients = await db.all("SELECT name, uuid, online, EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) as trusted FROM users WHERE NOT EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) AND NOT id = ?", req.user.id, req.user.id, req.user.id);
+    const clients = await db.all("SELECT name, uuid, online, EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) as trusted, (EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) AND EXISTS(SELECT * FROM trust WHERE a = id AND b = ?)) as mutualTrust FROM users WHERE (EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) AND EXISTS(SELECT * FROM trust WHERE a = id AND b = ?)) = FALSE AND NOT id = ?", req.user.id, req.user.id, req.user.id, req.user.id, req.user.id, req.user.id);
     res.status(200).json({ clients });
 });
 
 app.get("/api/clients/untrusted/online", authenticateToken, async (req, res) => {
-    const clients = await db.all("SELECT name, uuid, online, EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) as trusted FROM users WHERE NOT EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) AND online = 1 AND NOT id = ?", req.user.id, req.user.id, req.user.id);
+    const clients = await db.all("SELECT name, uuid, online, EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) as trusted, (EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) AND EXISTS(SELECT * FROM trust WHERE a = id AND b = ?)) as mutualTrust FROM users WHERE (EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) AND EXISTS(SELECT * FROM trust WHERE a = id AND b = ?)) = FALSE AND NOT id = ? AND online = TRUE", req.user.id, req.user.id, req.user.id, req.user.id, req.user.id, req.user.id);
     res.status(200).json({ clients });
 });
 
@@ -99,6 +99,10 @@ const wss = new WebSocketServer({ server });
 const uuidToClient = new Map(); //one uuid many clients
 const clientToUser = new Map(); //one client one user
 
+const establishedConnections = new Map();
+
+const availableClientsLastResponse = new Map();
+
 const pendingConnections = new Map();
 
 // if the server is not started no one can be online
@@ -115,8 +119,49 @@ const cleanPendingConnection = (c) => {
             user: c.client.user,
             token: c.client.token
         }
+    };
+};
+
+const broadcastAvailableClients = async (recievers) => {
+    for (let [client, user] of recievers) {
+        const clients = await db.all("SELECT name, uuid, online, EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) as trusted, (EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) AND EXISTS(SELECT * FROM trust WHERE a = id AND b = ?)) as mutualTrust FROM users WHERE (EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) AND EXISTS(SELECT * FROM trust WHERE a = id AND b = ?)) = FALSE AND NOT id = ? AND online = TRUE", user.id, user.id, user.id, user.id, user.id, user.id);
+        const lastResponse = availableClientsLastResponse.get(client);
+        if (JSON.stringify(lastResponse?.map(x => x.uuid)) !== JSON.stringify(clients?.map(x => x.uuid))) {
+            availableClientsLastResponse.set(client, clients);
+            client.send(JSON.stringify({ type: "available_clients", payload: { clients } }));
+        }
     }
-}
+};
+
+const initializeConnection = async (ws, hostUser, clientUser) => {
+    const clientSockets = uuidToClient.get(clientUser.uuid).filter(w => w !== ws);
+    for (let socket of clientSockets) {
+        if (establishedConnections.get(ws)?.includes(socket)) return;
+        const connectionID = uuidv4();
+        const pendingConnection = {
+            id: connectionID,
+            host: {
+                ws,
+                token: "",
+                user: {
+                    name: hostUser.name,
+                    uuid: hostUser.uuid
+                }
+            },
+            client: {
+                ws: socket,
+                token: "",
+                user: {
+                    name: clientUser.name,
+                    uuid: clientUser.uuid
+                }
+            }
+        };
+        pendingConnections.set(connectionID, pendingConnection);
+
+        pendingConnection.host.ws.send(JSON.stringify({ type: "request_host_token", payload: cleanPendingConnection(pendingConnection) }));
+    }
+};
 
 wss.on('connection', function connection(ws) {
     ws.on('error', console.error);
@@ -131,7 +176,7 @@ wss.on('connection', function connection(ws) {
     })
         .on('authenticate', (data) => {
             jwt.verify(data.token, process.env.JWT_KEY, async (err, _user) => {
-                if(err) return;
+                if (err) return;
                 // now user is authenticated
                 const user = await db.get("SELECT id, uuid, name, online FROM users WHERE uuid = ?", _user.uuid);
                 // set user online
@@ -141,37 +186,20 @@ wss.on('connection', function connection(ws) {
                 clientToUser.set(ws, user);
 
                 // send information to client about all connections that should happen automatically now
-                const eligibleConnections = await db.all("SELECT name, uuid FROM users WHERE EXISTS(SELECT * FROM trust WHERE (a = ? AND b = id) OR (a = id AND b = ?)) AND online = 1 AND NOT id = ?", user.id, user.id, user.id);
-                for (let connection of eligibleConnections) {
-                    // get host code from ws
-                    // send host code to client
-                    const connectionID = uuidv4();
-                    const pendingConnection = {
-                        id: connectionID,
-                        host: {
-                            ws,
-                            token: "",
-                            user: {
-                                name: user.name,
-                                uuid: user.uuid
-                            }
-                        },
-                        client: {
-                            ws: uuidToClient.get(connection.uuid)[0],
-                            token: "",
-                            user: {
-                                name: connection.name,
-                                uuid: connection.uuid
-                            }
-                        }
-                    };
-                    pendingConnections.set(connectionID, pendingConnection);
-
-                    pendingConnection.host.ws.send(JSON.stringify({ type: "request_host_token", payload: cleanPendingConnection(pendingConnection) }));
+                const eligibleUsers = await db.all("SELECT name, uuid FROM users WHERE EXISTS(SELECT * FROM trust WHERE (a = ? AND b = id)) AND EXISTS(SELECT * FROM trust WHERE (a = id AND b = ?)) AND online = 1 AND NOT id = ?", user.id, user.id, user.id);
+                for (let clientUser of eligibleUsers) {
+                    initializeConnection(ws, user, clientUser);
                 }
+
+                // connect to all own peers
+                initializeConnection(ws, user, user);
+
+                await broadcastAvailableClients(clientToUser);
             });
         })
         .on("host_token", (data) => {
+            const user = clientToUser.get(ws);
+            if(!user) return;
             const pendingConnection = pendingConnections.get(data.connection);
             pendingConnection.host.token = data.token;
 
@@ -180,27 +208,44 @@ wss.on('connection', function connection(ws) {
             pendingConnection.client.ws.send(JSON.stringify({ type: "request_client_token", payload: cleanPendingConnection(pendingConnection) }));
         })
         .on("client_token", (data) => {
+            const user = clientToUser.get(ws);
+            if(!user) return;
             const pendingConnection = pendingConnections.get(data.connection);
             pendingConnection.client.token = data.token;
 
             pendingConnections.set(data.connection, pendingConnection);
 
-            pendingConnection.client.ws.send(JSON.stringify({ type: "request_finish_connection", payload: cleanPendingConnection(pendingConnection) }));
-            pendingConnection.host.ws.send(JSON.stringify({ type: "request_finish_connection", payload: cleanPendingConnection(pendingConnection) }));
+            pendingConnection.client.ws.send(JSON.stringify({ type: "request_client_finish_connection", payload: cleanPendingConnection(pendingConnection) }));
+            pendingConnection.host.ws.send(JSON.stringify({ type: "request_host_finish_connection", payload: cleanPendingConnection(pendingConnection) }));
         })
         .on("finish_connection", (data) => {
-            pendingConnections.delete(data.connection);
+            const user = clientToUser.get(ws);
+            if(!user) return;
+            const pendingConnection = pendingConnections.get(data.connection);
+            if (pendingConnection.host.ws === ws) establishedConnections.set(pendingConnection.host.ws, [...(establishedConnections.get(pendingConnection.host.ws) || []), pendingConnection.client.ws]);
+            if (pendingConnection.client.ws === ws) establishedConnections.set(pendingConnection.client.ws, [...(establishedConnections.get(pendingConnection.client.ws) || []), pendingConnection.host.ws]);
+            if (establishedConnections.get(pendingConnection.host.ws)?.includes(pendingConnection.client.ws) && establishedConnections.get(pendingConnection.client.ws)?.includes(pendingConnection.host.ws))
+                pendingConnections.delete(data.connection);
         });
 
-    ws.on('close', () => {
+    ws.on('close', async () => {
         const user = clientToUser.get(ws);
+        if(!user) return;
         clientToUser.delete(ws);
         uuidToClient.set(user.uuid, (uuidToClient.get(user.uuid) || []).filter(w => w !== ws));
+
+        const connections = establishedConnections.get(ws) || [];
+        for (let connection of connections) {
+            establishedConnections.set(connection, (establishedConnections.get(connection) || []).filter(w => w !== ws));
+        }
+        establishedConnections.delete(ws);
 
         if (uuidToClient.get(user.uuid).length === 0) {
             // set user offline
             db.instance.run("UPDATE users SET online = FALSE WHERE uuid = ?", user.uuid);
         }
+
+        await broadcastAvailableClients(clientToUser);
     });
 });
 

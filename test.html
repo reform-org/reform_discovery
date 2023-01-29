@@ -34,9 +34,14 @@
                     ws.send(JSON.stringify({type: "host_token", payload: {token: "<HOST_TOKEN>", connection: payload.id}}))
                 }else if(type === "request_client_token") {
                     ws.send(JSON.stringify({type: "client_token", payload: {token: "<CLIENT_TOKEN>"+payload.host.token, connection: payload.id}}))
-                }else if(type === "request_finish_connection") {
+                }else if(type === "request_client_finish_connection") {
                     console.log(`Connect with clientToken ${payload.client.token} from user ${payload.client.user.name} and hostToken ${payload.host.token} from user ${payload.host.user.name}`)
                     ws.send(JSON.stringify({type: "finish_connection", payload: {connection: payload.id}}))
+                }else if(type === "request_host_finish_connection") {
+                    console.log(`Connect with clientToken ${payload.client.token} from user ${payload.client.user.name} and hostToken ${payload.host.token} from user ${payload.host.user.name}`)
+                    ws.send(JSON.stringify({type: "finish_connection", payload: {connection: payload.id}}))
+                }else if(type === "available_clients") {
+                    console.log("available clients:", payload.clients)
                 }
             }
 
