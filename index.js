@@ -7,8 +7,8 @@ import { db } from "./db.js";
 import cors from "cors";
 import { authenticateToken } from "./middleware.js";
 import { WebSocketServer } from "ws";
-// import { createServer } from 'https';
-import { createServer } from 'http';
+import { createServer } from 'https';
+import { createServer as createHttpServer } from 'http';
 import { readFileSync } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -88,12 +88,10 @@ app.listen(port, () => {
     console.log(`Example app listening on port ${port}`);
 });
 
-// const server = createServer({
-//     cert: readFileSync('./certs/server.cert'),
-//     key: readFileSync('./certs/server.key')
-// });
-
-const server = createServer();
+const server = process.env.HTTPS ? createServer({
+    cert: readFileSync(process.env.CERT_PATH),
+    key: readFileSync(process.env.CERT_KEY)
+}) : createHttpServer();
 
 const wss = new WebSocketServer({ server });
 const uuidToClient = new Map(); //one uuid many clients
