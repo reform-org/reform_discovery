@@ -162,6 +162,7 @@ const initializeConnection = async (ws, hostUser, clientUser) => {
 };
 
 wss.on('connection', function connection(ws) {
+    console.log("connecting...")
     ws.on('error', console.error);
 
     ws.on('message', function (message) {
