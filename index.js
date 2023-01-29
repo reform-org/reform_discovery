@@ -89,10 +89,10 @@ app.listen(port, () => {
 });
 
 console.log(process.env.HTTPS)
-const server = process.env.HTTPS === "TRUE" ? createServer({
+const server = process.env.HTTPS === "TRUE" ? /*createServer({
     cert: readFileSync(process.env.CERT_PATH),
     key: readFileSync(process.env.KEY_PATH)
-}) : createHttpServer();
+})*/"test" : createHttpServer();
 
 const wss = new WebSocketServer({ server });
 const uuidToClient = new Map(); //one uuid many clients
