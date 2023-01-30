@@ -11,6 +11,7 @@ import { createServer } from 'https';
 import { createServer as createHttpServer } from 'http';
 import { readFileSync } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
+import crypto from "crypto";
 
 dotenv.config();
 
@@ -106,6 +107,19 @@ const pendingConnections = new Map();
 // if the server is not started no one can be online
 db.instance.exec("UPDATE users SET online = FALSE");
 
+const generateTurnKey = () => {
+    const username = (Date.now() / 1000 + 12 * 3600).toString();
+    const hmac = crypto.createHmac("sha1", process.env.TURN_SECRET);
+    hmac.setEncoding("base64");
+    hmac.write(username);
+    hmac.end();
+    const credential = hmac.read();
+    return {
+        username,
+        credential,
+    };
+};
+
 const cleanPendingConnection = (c) => {
     return {
         id: c.id,
@@ -175,7 +189,10 @@ wss.on('connection', function connection(ws) {
     })
         .on('authenticate', (data) => {
             jwt.verify(data.token, process.env.JWT_KEY, async (err, _user) => {
-                if (err) return;
+                if (err) {
+                    ws.close();
+                    return;
+                };
                 // now user is authenticated
                 const user = await db.get("SELECT id, uuid, name, online FROM users WHERE uuid = ?", _user.uuid);
                 // set user online
@@ -194,6 +211,8 @@ wss.on('connection', function connection(ws) {
                 initializeConnection(ws, user, user);
 
                 await broadcastAvailableClients(clientToUser);
+
+                ws.send(JSON.stringify({type: "turn_keygen", payload: generateTurnKey()}))
             });
         })
         .on("host_token", (data) => {
