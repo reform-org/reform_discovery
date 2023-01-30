@@ -136,6 +136,10 @@ const cleanPendingConnection = (c) => {
     };
 };
 
+const ping = (ws) => {
+    ws.send(JSON.stringify({type: "ping", payload: null}))
+}
+
 const broadcastAvailableClients = async (recievers) => {
     for (let [client, user] of recievers) {
         const clients = await db.all("SELECT name, uuid, online, EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) as trusted, (EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) AND EXISTS(SELECT * FROM trust WHERE a = id AND b = ?)) as mutualTrust FROM users WHERE (EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) AND EXISTS(SELECT * FROM trust WHERE a = id AND b = ?)) = FALSE AND NOT id = ? AND online = TRUE", user.id, user.id, user.id, user.id, user.id, user.id);
@@ -246,6 +250,9 @@ wss.on('connection', function connection(ws) {
             if (pendingConnection.client.ws === ws) establishedConnections.set(pendingConnection.client.ws, [...(establishedConnections.get(pendingConnection.client.ws) || []), pendingConnection.host.ws]);
             if (establishedConnections.get(pendingConnection.host.ws)?.includes(pendingConnection.client.ws) && establishedConnections.get(pendingConnection.client.ws)?.includes(pendingConnection.host.ws))
                 pendingConnections.delete(data.connection);
+        })
+        .on("pong", () => {
+            setTimeout(() => ping(ws), 150000)
         });
 
     ws.on('close', async () => {
