@@ -7,8 +7,8 @@ import { db } from "./db.js";
 import cors from "cors";
 import { authenticateToken } from "./middleware.js";
 import { WebSocketServer } from "ws";
-// import { createServer } from 'https';
-import { createServer } from 'http';
+import { createServer } from 'https';
+import { createServer as createHttpServer } from 'http';
 import { readFileSync } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -26,7 +26,7 @@ const error = (message) => {
 };
 
 app.use(bodyParser.json());
-app.use(cors());
+app.use(cors({origin: "*"}));
 
 app.post("/api/login", async (req, res) => {
     const username = req.body?.username;
@@ -88,14 +88,12 @@ app.listen(port, () => {
     console.log(`Example app listening on port ${port}`);
 });
 
-// const server = createServer({
-//     cert: readFileSync('./certs/server.cert'),
-//     key: readFileSync('./certs/server.key')
-// });
+const server = process.env.HTTPS === "TRUE" ? createServer({
+    cert: readFileSync(process.env.CERT_PATH),
+    key: readFileSync(process.env.KEY_PATH)
+}) : createHttpServer();
 
-const server = createServer();
-
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ noServer: true });
 const uuidToClient = new Map(); //one uuid many clients
 const clientToUser = new Map(); //one client one user
 
@@ -164,6 +162,7 @@ const initializeConnection = async (ws, hostUser, clientUser) => {
 };
 
 wss.on('connection', function connection(ws) {
+    console.log("connection established")
     ws.on('error', console.error);
 
     ws.on('message', function (message) {
@@ -247,6 +246,13 @@ wss.on('connection', function connection(ws) {
 
         await broadcastAvailableClients(clientToUser);
     });
+});
+
+server.on('upgrade', (req, res, head) => {
+   wss.handleUpgrade(req, res, head, (ws) => {
+    console.log("upgraded")
+    wss.emit("connection", ws)
+   }) 
 });
 
 server.listen(process.env.WSS_PORT || 7071, () => {

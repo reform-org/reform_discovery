@@ -10,7 +10,7 @@
     <button id="login">Login</button>
     <script>
         document.querySelector("#login").addEventListener("click", async () => {
-            const token = await fetch("http://localhost:3000/api/login", {
+            const token = await fetch("https://discovery.lukasschreiber.com/api/login", {
                 method: "POST",
                 headers: {
                     "content-type": "application/json"
@@ -21,7 +21,7 @@
                 })
             }).then(res => res.json());
 
-            const ws = new WebSocket('ws://localhost:7071/');
+            const ws = new WebSocket('wss://wss.discovery.lukasschreiber.com');
 
             ws.onmessage = (message) => {
                 const event = JSON.parse(message.data);
