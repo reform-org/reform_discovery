@@ -219,6 +219,7 @@ wss.on('connection', function connection(ws) {
                 initializeConnection(ws, user, user);
 
                 await broadcastAvailableClients(clientToUser);
+                ping(ws)
             });
         })
         .on("host_token", (data) => {
