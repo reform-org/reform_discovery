@@ -194,7 +194,7 @@ wss.on('connection', function connection(ws) {
         .on('authenticate', (data) => {
             jwt.verify(data.token, process.env.JWT_KEY, async (err, _user) => {
                 if (err) {
-                    // ws.close();
+                    ws.close();
                     return;
                 };
                 // now user is authenticated
