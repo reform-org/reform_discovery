@@ -158,7 +158,8 @@ const initializeConnection = async (ws, hostUser, clientUser) => {
                 user: {
                     name: hostUser.name,
                     uuid: hostUser.uuid
-                }
+                },
+                turn: generateTurnKey()
             },
             client: {
                 ws: socket,
@@ -166,7 +167,8 @@ const initializeConnection = async (ws, hostUser, clientUser) => {
                 user: {
                     name: clientUser.name,
                     uuid: clientUser.uuid
-                }
+                },
+                turn: generateTurnKey()
             }
         };
         pendingConnections.set(connectionID, pendingConnection);
@@ -211,8 +213,6 @@ wss.on('connection', function connection(ws) {
                 initializeConnection(ws, user, user);
 
                 await broadcastAvailableClients(clientToUser);
-
-                ws.send(JSON.stringify({type: "turn_keygen", payload: generateTurnKey()}))
             });
         })
         .on("host_token", (data) => {
