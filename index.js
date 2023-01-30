@@ -125,11 +125,13 @@ const cleanPendingConnection = (c) => {
         id: c.id,
         host: {
             user: c.host.user,
-            token: c.host.token
+            token: c.host.token,
+            turn: c.host.turn
         },
         client: {
             user: c.client.user,
-            token: c.client.token
+            token: c.client.token,
+            turn: c.client.turn
         }
     };
 };
