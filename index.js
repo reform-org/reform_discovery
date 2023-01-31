@@ -154,7 +154,7 @@ const broadcastAvailableClients = async (recievers) => {
 const sendAvailableClients = async (ws) => {
     const user = clientToUser.get(ws);
     const clients = await db.all("SELECT name, uuid, online, EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) as trusted, (EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) AND EXISTS(SELECT * FROM trust WHERE a = id AND b = ?)) as mutualTrust FROM users WHERE (EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) AND EXISTS(SELECT * FROM trust WHERE a = id AND b = ?)) = FALSE AND NOT id = ? AND online = TRUE", user.id, user.id, user.id, user.id, user.id, user.id);
-    client.send(JSON.stringify({ type: "available_clients", payload: { clients } }));
+    ws.send(JSON.stringify({ type: "available_clients", payload: { clients } }));
 }
 
 const initializeConnection = async (ws, hostUser, clientUser) => {
