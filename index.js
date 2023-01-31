@@ -299,6 +299,7 @@ wss.on('connection', function connection(ws) {
 
             const mutualTrust = await db.get("SELECT (EXISTS(SELECT * FROM trust WHERE a = ? AND b = ?) AND EXISTS(SELECT * FROM trust WHERE a = ? AND b = ?)) as mutualTrust", user.id, userEntry.id, userEntry.id, user.id)
             if(!mutualTrust.mutualTrust) {
+                console.log("no mutual trust")
                 const clientsA = uuidToClients.get(user.uuid)
                 const clientsB = uuidToClients.get(userEntry.uuid)
 
