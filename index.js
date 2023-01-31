@@ -88,7 +88,7 @@ app.get("/api/clients/untrusted/online", authenticateToken, async (req, res) => 
 });
 
 app.listen(port, () => {
-    console.log(`Example app listening on port ${port}`);
+    console.log(`REST server listening on port ${port}`);
 });
 
 const server = process.env.HTTPS === "TRUE" ? createServer({
@@ -162,7 +162,7 @@ const sendAvailableClients = async (ws) => {
 const initializeConnection = async (ws, hostUser, clientUser) => {
     const clientSockets = uuidToClients.get(clientUser.uuid).filter(w => w !== ws);
     for (let socket of clientSockets) {
-        if (establishedConnections.get(ws)?.includes(socket)) return;
+        if (establishedConnections.get(ws)?.find(connection => connection.ws === socket)) return;
         const connectionID = uuidv4();
         const pendingConnection = {
             id: connectionID,
@@ -194,6 +194,16 @@ const initializeConnection = async (ws, hostUser, clientUser) => {
 wss.on('connection', function connection(ws) {
     console.log("connection established");
     ws.on('error', console.error);
+    ws.pingssend = 0;
+
+    const interval = setInterval(() => {
+        if (ws.pingssent >= 2) {
+            ws.close();
+        } else {
+            ping(ws);
+            ws.pingssent++;
+        }
+    }, 10000);
 
     ws.on('message', function (message) {
         try {
@@ -227,7 +237,6 @@ wss.on('connection', function connection(ws) {
                 initializeConnection(ws, user, user);
 
                 await broadcastAvailableClients(clientToUser);
-                ping(ws);
             });
         })
         .on("host_token", (data) => {
@@ -255,9 +264,11 @@ wss.on('connection', function connection(ws) {
             const user = clientToUser.get(ws);
             if (!user) return;
             const pendingConnection = pendingConnections.get(data.connection);
-            if (pendingConnection.host.ws === ws) establishedConnections.set(pendingConnection.host.ws, [...(establishedConnections.get(pendingConnection.host.ws) || []), pendingConnection.client.ws]);
-            if (pendingConnection.client.ws === ws) establishedConnections.set(pendingConnection.client.ws, [...(establishedConnections.get(pendingConnection.client.ws) || []), pendingConnection.host.ws]);
-            if (establishedConnections.get(pendingConnection.host.ws)?.includes(pendingConnection.client.ws) && establishedConnections.get(pendingConnection.client.ws)?.includes(pendingConnection.host.ws))
+
+            if (pendingConnection.host.ws === ws) establishedConnections.set(pendingConnection.host.ws, [...(establishedConnections.get(pendingConnection.host.ws) || []), {ws: pendingConnection.client.ws, id: pendingConnection.id}]);
+            if (pendingConnection.client.ws === ws) establishedConnections.set(pendingConnection.client.ws, [...(establishedConnections.get(pendingConnection.client.ws) || []), {ws: pendingConnection.host.ws, id: pendingConnection.id}]);
+            
+            if ((establishedConnections.get(pendingConnection.host.ws)|| []).find(connection => connection.ws === pendingConnection.client.ws) && (establishedConnections.get(pendingConnection.client.ws)||[]).find(connection => connection.ws === pendingConnection.host.ws))
                 pendingConnections.delete(data.connection);
         })
         .on("whitelist_add", async (data) => {
@@ -295,7 +306,7 @@ wss.on('connection', function connection(ws) {
             sendAvailableClients(ws);
         })
         .on("pong", () => {
-            setTimeout(() => ping(ws), 150000);
+            ws.pingssend = 0;
         });
 
     ws.on('close', async () => {
@@ -306,7 +317,8 @@ wss.on('connection', function connection(ws) {
 
         const connections = establishedConnections.get(ws) || [];
         for (let connection of connections) {
-            establishedConnections.set(connection, (establishedConnections.get(connection) || []).filter(w => w !== ws));
+            connection.ws.send(JSON.stringify({type: "connection_closed", payload: {id: connection.id}}))
+            establishedConnections.set(connection.ws, (establishedConnections.get(connection.ws) || []).filter(w => w.ws !== ws));
         }
         establishedConnections.delete(ws);
 
@@ -321,7 +333,6 @@ wss.on('connection', function connection(ws) {
 
 server.on('upgrade', (req, res, head) => {
     wss.handleUpgrade(req, res, head, (ws) => {
-        console.log("upgraded");
         wss.emit("connection", ws);
     });
 });
