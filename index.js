@@ -259,7 +259,7 @@ wss.on('connection', function connection(ws) {
                 pendingConnections.delete(data.connection);
         })
         .on("whitelist_add", async (data) => {
-            const user = clientToUser.get(ws)
+            const user = clientToUser.get(ws);
             const uuid = data.uuid;
             if (!uuid) return;
             const userEntry = await db.get("SELECT * FROM users WHERE uuid = ?", uuid);
@@ -267,9 +267,27 @@ wss.on('connection', function connection(ws) {
 
             db.instance.run("INSERT OR REPLACE INTO trust(a, b) VALUES (?, ?)", user.id, userEntry.id);
             
+            const mutualTrust = await db.get("SELECT (EXISTS(SELECT * FROM trust WHERE a = ? AND b = ?) AND EXISTS(SELECT * FROM trust WHERE a = ? AND b = ?))", user.id, userEntry.id, userEntry.id, user.id)
+
+            if(mutualTrust) initializeConnection(ws, user, userEntry)
+
             sendAvailableClients(ws);
-            for(let client of (uuidToClients.get(uuid) || [])){
-                sendAvailableClients(client)
+            for (let client of (uuidToClients.get(uuid) || [])) {
+                sendAvailableClients(client);
+            }
+        })
+        .on("whitelist_del", async (data) => {
+            const user = clientToUser.get(ws);
+            const uuid = data.uuid;
+            if (!uuid) return;
+            const userEntry = await db.get("SELECT * FROM users WHERE uuid = ?", uuid);
+            if (!userEntry) return;
+
+            db.instance.run("DELETE FROM trust WHERE a = ? AND b = ?", user.id, userEntry.id);
+
+            sendAvailableClients(ws);
+            for (let client of (uuidToClients.get(uuid) || [])) {
+                sendAvailableClients(client);
             }
         })
         .on("pong", () => {
