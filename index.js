@@ -305,8 +305,16 @@ wss.on('connection', function connection(ws) {
 
                 for(let [key, value] of establishedConnections) {
                     for(let client of clientsA) {
-                        console.log(client === key, clientsB.includes(value.ws), clientsB.find(p => p === value.ws), clientsB.length)
+                        console.log("A", client === key, clientsB.includes(value.ws), clientsB.find(p => p === value.ws), clientsB.length)
                         if(key === client && clientsB.includes(value.ws)) {
+                            key.send(JSON.stringify({type: "connection_closed", payload: {id: value.id}}))
+                            value.ws.send(JSON.stringify({type: "connection_closed", payload: {id: value.id}}))
+                        }
+                    }
+
+                    for(let client of clientsB) {
+                        console.log("B", client === key, clientsA.includes(value.ws), clientsA.find(p => p === value.ws), clientsA.length)
+                        if(key === client && clientsA.includes(value.ws)) {
                             key.send(JSON.stringify({type: "connection_closed", payload: {id: value.id}}))
                             value.ws.send(JSON.stringify({type: "connection_closed", payload: {id: value.id}}))
                         }
