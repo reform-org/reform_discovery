@@ -8,6 +8,8 @@
     <input type="text" id="user" value="Lukas" />
     <input type="text" id="pass" value="test" />
     <button id="login">Login</button>
+    <button id="reject">Reject</button>
+
     <script>
         document.querySelector("#login").addEventListener("click", async () => {
             const token = await fetch("http://localhost:3000/api/login", {
@@ -22,7 +24,6 @@
             }).then(res => res.json());
 
             const ws = new WebSocket('ws://localhost:7071');
-
             ws.onmessage = (message) => {
                 const event = JSON.parse(message.data);
                 handleEvent(event.type, event.payload);

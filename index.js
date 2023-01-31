@@ -304,8 +304,10 @@ wss.on('connection', function connection(ws) {
                 const clientsB = uuidToClients.get(userEntry.uuid)
 
                 for(let [key, value] of establishedConnections) {
+                    console.log(key, value)
                     for(let client of clientsA) {
                         if(key === client && clientsB.includes(value.ws)) {
+                            console.log("here")
                             key.send(JSON.stringify({type: "connection_closed", payload: {id: value.id}}))
                             value.ws.send(JSON.stringify({type: "connection_closed", payload: {id: value.id}}))
                         }
