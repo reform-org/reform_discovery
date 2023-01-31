@@ -151,6 +151,13 @@ const broadcastAvailableClients = async (recievers) => {
     }
 };
 
+const sendAvailableClients = async (ws) => {
+    const user = clientToUser.get(ws);
+    const map = new Map();
+    map.set(ws, user);
+    await broadcastAvailableClients(map);
+}
+
 const initializeConnection = async (ws, hostUser, clientUser) => {
     const clientSockets = uuidToClient.get(clientUser.uuid).filter(w => w !== ws);
     for (let socket of clientSockets) {
@@ -251,6 +258,9 @@ wss.on('connection', function connection(ws) {
             if (pendingConnection.client.ws === ws) establishedConnections.set(pendingConnection.client.ws, [...(establishedConnections.get(pendingConnection.client.ws) || []), pendingConnection.host.ws]);
             if (establishedConnections.get(pendingConnection.host.ws)?.includes(pendingConnection.client.ws) && establishedConnections.get(pendingConnection.client.ws)?.includes(pendingConnection.host.ws))
                 pendingConnections.delete(data.connection);
+        })
+        .on("request_available_clients", (data) => {
+            sendAvailableClients(ws);
         })
         .on("pong", () => {
             setTimeout(() => ping(ws), 150000)
