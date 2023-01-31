@@ -300,21 +300,20 @@ wss.on('connection', function connection(ws) {
             const mutualTrust = await db.get("SELECT (EXISTS(SELECT * FROM trust WHERE a = ? AND b = ?) AND EXISTS(SELECT * FROM trust WHERE a = ? AND b = ?)) as mutualTrust", user.id, userEntry.id, userEntry.id, user.id)
             if(!mutualTrust.mutualTrust) {
                 console.log("no mutual trust")
-                const connectionsToKill = [];
-                for(let [host, connection] of establishedConnections){
-                    console.log(connection)
-                    if(clientToUser.get(host).uuid === user.uuid && clientToUser.get(connection.ws)?.uuid === userEntry.uuid){
-                        connectionsToKill.push({a: host, b: connection.ws, id: connection.id})
-                    }
-                }
+                // const connectionsToKill = [];
+                // for(let [host, connection] of establishedConnections){
+                //     if(clientToUser.get(host).uuid === user.uuid && clientToUser.get(connection.ws)?.uuid === userEntry.uuid){
+                //         connectionsToKill.push({a: host, b: connection.ws, id: connection.id})
+                //     }
+                // }
 
-                for(let connection of connectionsToKill){
-                    connection.a.send(JSON.stringify({type: "connection_closed", payload: {id: connection.id}}))
-                    connection.b.send(JSON.stringify({type: "connection_closed", payload: {id: connection.id}}))
-                    establishedConnections.set(connection.a, (establishedConnections.get(connection.a) || []).filter(w => w.ws !== connection.b));
-                    establishedConnections.set(connection.b, (establishedConnections.get(connection.b) || []).filter(w => w.ws !== connection.a));
+                // for(let connection of connectionsToKill){
+                //     connection.a.send(JSON.stringify({type: "connection_closed", payload: {id: connection.id}}))
+                //     connection.b.send(JSON.stringify({type: "connection_closed", payload: {id: connection.id}}))
+                //     establishedConnections.set(connection.a, (establishedConnections.get(connection.a) || []).filter(w => w.ws !== connection.b));
+                //     establishedConnections.set(connection.b, (establishedConnections.get(connection.b) || []).filter(w => w.ws !== connection.a));
 
-                }
+                // }
             }
 
             sendAvailableClients(ws);
