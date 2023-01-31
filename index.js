@@ -56,7 +56,7 @@ app.post("/api/whitelist/trust", authenticateToken, async (req, res) => {
     const userEntry = await db.get("SELECT * FROM users WHERE uuid = ?", uuid);
     if (!userEntry) return res.status(404).json(error(`The user with the uuid "${uuid}" does not exist. Please contact your admin to add the user manually.`));
 
-    db.instance.run("INSERT INTO trust(a, b) VALUES (?, ?)", req.user.id, userEntry.id);
+    db.instance.run("INSERT OR REPLACE INTO trust(a, b) VALUES (?, ?)", req.user.id, userEntry.id);
     res.status(202).send();
 });
 
