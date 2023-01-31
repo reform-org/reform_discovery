@@ -302,12 +302,11 @@ wss.on('connection', function connection(ws) {
                 console.log("no mutual trust")
                 const connectionsToKill = [];
                 for(let [host, connection] of establishedConnections){
+                    console.log(connection)
                     if(clientToUser.get(host).uuid === user.uuid && clientToUser.get(connection.ws)?.uuid === userEntry.uuid){
                         connectionsToKill.push({a: host, b: connection.ws, id: connection.id})
                     }
                 }
-
-                console.log(connectionsToKill)
 
                 for(let connection of connectionsToKill){
                     connection.a.send(JSON.stringify({type: "connection_closed", payload: {id: connection.id}}))
