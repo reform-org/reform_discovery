@@ -307,6 +307,8 @@ wss.on('connection', function connection(ws) {
                     }
                 }
 
+                console.log(connectionsToKill)
+
                 for(let connection of connectionsToKill){
                     connection.a.send(JSON.stringify({type: "connection_closed", payload: {id: connection.id}}))
                     connection.b.send(JSON.stringify({type: "connection_closed", payload: {id: connection.id}}))
