@@ -289,6 +289,9 @@ wss.on('connection', function connection(ws) {
                 sendAvailableClients(client);
             }
         })
+        .on("request_available_clients", async (data) => {
+            sendAvailableClients(ws);
+        })
         .on("pong", () => {
             setTimeout(() => ping(ws), 150000);
         });
