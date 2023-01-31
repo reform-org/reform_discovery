@@ -268,8 +268,8 @@ wss.on('connection', function connection(ws) {
             db.instance.run("INSERT OR REPLACE INTO trust(a, b) VALUES (?, ?)", user.id, userEntry.id);
             
             const mutualTrust = await db.get("SELECT (EXISTS(SELECT * FROM trust WHERE a = ? AND b = ?) AND EXISTS(SELECT * FROM trust WHERE a = ? AND b = ?))", user.id, userEntry.id, userEntry.id, user.id)
-
-            if(mutualTrust) initializeConnection(ws, user, userEntry)
+            console.log(mutualTrust)
+            // if(mutualTrust) initializeConnection(ws, user, userEntry)
 
             sendAvailableClients(ws);
             for (let client of (uuidToClients.get(uuid) || [])) {
