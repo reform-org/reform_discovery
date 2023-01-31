@@ -300,34 +300,6 @@ wss.on('connection', function connection(ws) {
             const mutualTrust = await db.get("SELECT (EXISTS(SELECT * FROM trust WHERE a = ? AND b = ?) AND EXISTS(SELECT * FROM trust WHERE a = ? AND b = ?)) as mutualTrust", user.id, userEntry.id, userEntry.id, user.id)
             if(!mutualTrust.mutualTrust) {
                 console.log("no mutual trust")
-                const clientsA = uuidToClients.get(user.uuid)
-                const clientsB = uuidToClients.get(userEntry.uuid)
-
-                for(let [key, value] of establishedConnections) {
-                    for(let client of clientsA) {
-                        console.log("A", client === key, clientsB.includes(value.ws), clientsB.find(p => p === value.ws), clientsB.length)
-                        if(key === client && clientsB.includes(value.ws)) {
-                            key.send(JSON.stringify({type: "connection_closed", payload: {id: value.id}}))
-                            value.ws.send(JSON.stringify({type: "connection_closed", payload: {id: value.id}}))
-                        }
-                    }
-
-                    for(let client of clientsB) {
-                        console.log("B", client === key, clientsA.includes(value.ws), clientsA.find(p => p === value.ws), clientsA.length)
-                        if(key === client && clientsA.includes(value.ws)) {
-                            key.send(JSON.stringify({type: "connection_closed", payload: {id: value.id}}))
-                            value.ws.send(JSON.stringify({type: "connection_closed", payload: {id: value.id}}))
-                        }
-                    }
-                }
-
-                for(let client of clientsA) {
-                    establishedConnections.delete(client);
-                }
-
-                for(let client of clientsB) {
-                    establishedConnections.delete(client);
-                }
             }
 
             sendAvailableClients(ws);
