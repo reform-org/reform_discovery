@@ -298,6 +298,28 @@ wss.on('connection', function connection(ws) {
             db.instance.run("DELETE FROM trust WHERE a = ? AND b = ?", user.id, userEntry.id);
 
             const mutualTrust = await db.get("SELECT (EXISTS(SELECT * FROM trust WHERE a = ? AND b = ?) AND EXISTS(SELECT * FROM trust WHERE a = ? AND b = ?)) as mutualTrust", user.id, userEntry.id, userEntry.id, user.id)
+            if(!mutualTrust.mutualTrust) {
+                console.log("no mutual trust")
+                const clientsA = uuidToClients.get(user.uuid)
+                const clientsB = uuidToClients.get(userEntry.uuid)
+
+                for(let [key, value] of establishedConnections) {
+                    for(let client of clientsA) {
+                        if(key === client && clientsB.includes(value.ws)) {
+                            key.send(JSON.stringify({type: "connection_closed", payload: {id: value.id}}))
+                            client.send(JSON.stringify({type: "connection_closed", payload: {id: value.id}}))
+                        }
+                    }
+                }
+
+                for(let client of clientsA) {
+                    establishedConnections.delete(client);
+                }
+
+                for(let client of clientsB) {
+                    establishedConnections.delete(client);
+                }
+            }
 
             sendAvailableClients(ws);
             for (let client of (uuidToClients.get(uuid) || [])) {
