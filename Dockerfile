@@ -4,4 +4,4 @@ WORKDIR /app
 COPY . .
 RUN npm ci
 EXPOSE 3000 7071
-CMD ["npm", "start"]
+CMD ["node", "index.js"]
