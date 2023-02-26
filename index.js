@@ -15,6 +15,8 @@ import crypto from "crypto";
 
 dotenv.config();
 
+db.init()
+
 const app = express();
 const port = process.env.API_PORT || 3000;
 

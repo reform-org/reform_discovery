@@ -2,7 +2,6 @@
 
 ## Installation
 Install with `npm install`
-Then run `npm run db:init` to create the database tables. This command will drop all existing tables.
 
 ## User managment
 Create users with running `npm run user:add` and provide username and password as you are prompted. This is an intermediate Solution until the SSO is working with the discovery server.
