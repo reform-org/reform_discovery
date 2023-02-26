@@ -18,7 +18,7 @@ dotenv.config();
 db.init()
 
 const app = express();
-const port = process.env.API_PORT || 3000;
+const port = process.env.VITE_DISCOVERY_SERVER_PORT || 3000;
 
 const error = (message, fields = []) => {
     return {
@@ -358,6 +358,8 @@ server.on('upgrade', (req, res, head) => {
     });
 });
 
-server.listen(process.env.WSS_PORT || 7071, () => {
-    console.log("WSS Server started at Port 7071");
+const webSocketPort = process.env.VITE_DISCOVERY_SERVER_WEBSOCKET_PORT || 7071
+
+server.listen(webSocketPort, () => {
+    console.log(`WebSocket Server started at Port ${webSocketPort}`);
 });
