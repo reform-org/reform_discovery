@@ -6,9 +6,11 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon index.js",
+    "dev": "nodemon index.js",
+    "start": "node index.js",
     "user:add": "node cli.js",
-    "db:init": "node init.js"
+    "db:init": "node init.js",
+    "db:reset": "node reset.js"
   },
   "author": "",
   "license": "ISC",

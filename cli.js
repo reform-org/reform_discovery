@@ -3,6 +3,8 @@ import bcrypt from "bcrypt";
 import { db } from "./db.js";
 import { v4 as uuidv4 } from 'uuid';
 
+db.init()
+
 const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
