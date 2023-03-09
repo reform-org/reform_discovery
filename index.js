@@ -18,7 +18,7 @@ dotenv.config();
 db.init()
 
 const app = express();
-const port = process.env.VITE_DISCOVERY_SERVER_PORT;
+const port = process.env.VITE_DISCOVERY_SERVER_LISTEN_PORT;
 const serverPath = process.env.VITE_DISCOVERY_SERVER_PATH
 
 const error = (message, fields = []) => {
@@ -359,7 +359,7 @@ server.on('upgrade', (req, res, head) => {
     });
 });
 
-const webSocketPort = process.env.VITE_DISCOVERY_SERVER_WEBSOCKET_PORT
+const webSocketPort = process.env.VITE_DISCOVERY_SERVER_WEBSOCKET_LISTEN_PORT
 
 server.listen(webSocketPort, () => {
     console.log(`WebSocket Server started at Port ${webSocketPort}`);
