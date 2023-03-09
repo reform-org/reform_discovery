@@ -18,7 +18,8 @@ dotenv.config();
 db.init()
 
 const app = express();
-const port = process.env.VITE_DISCOVERY_SERVER_PORT;
+const port = process.env.VITE_DISCOVERY_SERVER_LISTEN_PORT;
+const serverPath = process.env.VITE_DISCOVERY_SERVER_PATH
 
 const error = (message, fields = []) => {
     return {
@@ -32,7 +33,7 @@ const error = (message, fields = []) => {
 app.use(bodyParser.json());
 app.use(cors({ origin: "*" }));
 
-app.post("/api/login", async (req, res) => {
+app.post(`${serverPath}/login`, async (req, res) => {
     const username = req.body?.username;
     const password = req.body?.password;
 
@@ -49,12 +50,12 @@ app.post("/api/login", async (req, res) => {
     res.json({ username, token });
 });
 
-app.post("/api/available", authenticateToken, async (req, res) => {
+app.post(`${serverPath}/available`, authenticateToken, async (req, res) => {
     db.instance.run("UPDATE users SET online = TRUE WHERE uuid = ?", req.user.uuid);
     res.status(202).send();
 });
 
-app.post("/api/whitelist/trust", authenticateToken, async (req, res) => {
+app.post(`${serverPath}/whitelist/trust`, authenticateToken, async (req, res) => {
     const uuid = req.body.user?.uuid;
     if (!uuid) return res.status(400).json(error("Please specify a uuid."));
     const userEntry = await db.get("SELECT * FROM users WHERE uuid = ?", uuid);
@@ -64,7 +65,7 @@ app.post("/api/whitelist/trust", authenticateToken, async (req, res) => {
     res.status(202).send();
 });
 
-app.post("/api/whitelist/revoke", authenticateToken, async (req, res) => {
+app.post(`${serverPath}/whitelist/revoke`, authenticateToken, async (req, res) => {
     const uuid = req.body.user?.uuid;
     if (!uuid) return res.status(400).json(error("Please specify a uuid."));
     const userEntry = await db.get("SELECT * FROM users WHERE uuid = ?", uuid);
@@ -74,17 +75,17 @@ app.post("/api/whitelist/revoke", authenticateToken, async (req, res) => {
     res.status(202).send();
 });
 
-app.get("/api/clients", authenticateToken, async (req, res) => {
+app.get(`${serverPath}/clients`, authenticateToken, async (req, res) => {
     const clients = await db.all("SELECT name, uuid, online, EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) as trusted, (EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) AND EXISTS(SELECT * FROM trust WHERE a = id AND b = ?)) as mutualTrust FROM users WHERE NOT id = ?", req.user.id, req.user.id, req.user.id, req.user.id);
     res.status(200).json({ clients });
 });
 
-app.get("/api/clients/untrusted", authenticateToken, async (req, res) => {
+app.get(`${serverPath}/clients/untrusted`, authenticateToken, async (req, res) => {
     const clients = await db.all("SELECT name, uuid, online, EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) as trusted, (EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) AND EXISTS(SELECT * FROM trust WHERE a = id AND b = ?)) as mutualTrust FROM users WHERE (EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) AND EXISTS(SELECT * FROM trust WHERE a = id AND b = ?)) = FALSE AND NOT id = ?", req.user.id, req.user.id, req.user.id, req.user.id, req.user.id, req.user.id);
     res.status(200).json({ clients });
 });
 
-app.get("/api/clients/untrusted/online", authenticateToken, async (req, res) => {
+app.get(`${serverPath}/clients/untrusted/online`, authenticateToken, async (req, res) => {
     const clients = await db.all("SELECT name, uuid, online, EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) as trusted, (EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) AND EXISTS(SELECT * FROM trust WHERE a = id AND b = ?)) as mutualTrust FROM users WHERE (EXISTS(SELECT * FROM trust WHERE a = ? AND b = id) AND EXISTS(SELECT * FROM trust WHERE a = id AND b = ?)) = FALSE AND NOT id = ? AND online = TRUE", req.user.id, req.user.id, req.user.id, req.user.id, req.user.id, req.user.id);
     res.status(200).json({ clients });
 });
@@ -358,7 +359,7 @@ server.on('upgrade', (req, res, head) => {
     });
 });
 
-const webSocketPort = process.env.VITE_DISCOVERY_SERVER_WEBSOCKET_PORT
+const webSocketPort = process.env.VITE_DISCOVERY_SERVER_WEBSOCKET_LISTEN_PORT
 
 server.listen(webSocketPort, () => {
     console.log(`WebSocket Server started at Port ${webSocketPort}`);
